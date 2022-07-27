@@ -6,6 +6,7 @@ const constants = require("constants");
 const parser = require('body-parser');
 const {ObjectId} = require("mongodb");
 const {now} = require("mongoose");
+const underscore = require('underscore');
 require('dotenv').config()
 
 app.use(cors())
@@ -31,7 +32,7 @@ const exerciseSchema = new mongo.Schema({
   description: String,
   duration: Number,
   date: String,
-  userid: ObjectId
+  userid: String
 });
 const exerciseModel = mongo.model('exercise', exerciseSchema);
 
@@ -40,7 +41,10 @@ app.post('/api/users',urlencodedParser, (req, res) => {
   users.save((err, data) => {
     if (err) console.log(err);
     else
-      res.json({username: data.username, _id: data._id});
+    {
+      console.log("USER : ", data._id.toString());
+      res.json({username: data.username, _id: data._id.toString()});
+    }
   });
 })
 
@@ -51,6 +55,16 @@ app.get('/api/users', urlencodedParser, (req, res) => {
       res.json(data);
   })
 });
+
+// For Debug
+app.get('/api/exercises/', (req, res) => {
+  exerciseModel.find({}, (err, data) => {
+    if (err) console.log(err);
+    else{
+      res.json(data);
+    }
+  })
+})
 
 app.post('/api/users/:_id/exercises',urlencodedParser, (req, res) =>{
   console.log("ID = ", req.params._id);
@@ -63,14 +77,48 @@ app.post('/api/users/:_id/exercises',urlencodedParser, (req, res) =>{
       res.json({error: "The User not Found"});
       return;
     }
-    const exercises = new exerciseModel({username: user.username, desription: req.body.desription, duration: req.body.duration, userid: req.body._id, date: date});
+    const exercises = new exerciseModel({username: user.username, description: req.body.description, duration: req.body.duration, userid: user._id.toString(), date: date});
     exercises.save((err, data) => {
       if (err) console.log(err);
       else
-        res.json(data);
+        res.json({_id: user._id.toString(), username: user.username, date: exercises.date, duration: exercises.duration, description: exercises.description});
     })
   })
 })
+
+app.get('/api/users/:_id/logs', (req, res) => {
+  const id = req.params._id;
+  if (underscore.isEmpty(req.query))
+    console.log('Empty');
+  else
+    console.log('Not Empty');
+  console.log("Query = ", req.query);
+  var result = {
+    _id: String,
+    username: String,
+    count: Number,
+  log:[]
+  }
+  console.log('id:', id);
+  exerciseModel.find({userid: id}, (err, data) => {
+    if (err) {
+      console.log("Error: ", err);
+    }
+    else
+    {
+      if (!underscore.isEmpty(req.query)){
+        const sorted = data.sort((a, b) => b.date - a.date);
+      }
+      result._id = id;
+      result.username = data[0].username;
+      result.count = data.length;
+      for (var i = 0; i < data.length; i++)
+        result.log.push({ description: data[i].description, duration: data[i].duration, date: data[i].date});
+      res.json(result);
+    }
+  })
+})
+
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port)

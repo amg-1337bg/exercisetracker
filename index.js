@@ -106,9 +106,6 @@ app.get('/api/users/:_id/logs', (req, res) => {
     }
     else
     {
-      if (!underscore.isEmpty(req.query)){
-        const sorted = data.sort((a, b) => b.date - a.date);
-      }
       result._id = id;
       result.username = data[0].username;
       result.count = data.length;

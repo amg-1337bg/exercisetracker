@@ -88,10 +88,6 @@ app.post('/api/users/:_id/exercises',urlencodedParser, (req, res) =>{
 
 app.get('/api/users/:_id/logs', (req, res) => {
   const id = req.params._id;
-  if (underscore.isEmpty(req.query))
-    console.log('Empty');
-  else
-    console.log('Not Empty');
   console.log("Query = ", req.query);
   var result = {
     _id: String,
@@ -109,8 +105,37 @@ app.get('/api/users/:_id/logs', (req, res) => {
       result._id = id;
       result.username = data[0].username;
       result.count = data.length;
-      for (var i = 0; i < data.length; i++)
-        result.log.push({ description: data[i].description, duration: data[i].duration, date: data[i].date});
+      if (!underscore.isEmpty(req.query)){
+        const sorted = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log("sorted: ", sorted);
+        var from = sorted.findIndex((ele) => ele.date === new Date(req.query.from).toDateString());
+        var to;
+        for (var i = sorted.length - 1; i >= 0; i--)
+        {
+          if (sorted[i].date === new Date(req.query.to).toDateString())
+          {
+            to = i;
+            break;
+          }
+        }
+        console.log("indexs: ", from, to);
+        console.log("SLICE: ", sorted.slice(from , to + 1));
+        if (from === -1)
+          from = 0;
+        if (to === -1)
+          to = sorted.length - 1;
+        if (!underscore.isEmpty(req.query.limit)){
+          for (var i = 0; i < req.query.limit; i++)
+            result.log.push({ description: data[i].description, duration: data[i].duration, date: data[i].date});
+        } else {
+          for (var i = 0; i < sorted.length; i++)
+            result.log.push({ description: data[i].description, duration: data[i].duration, date: data[i].date});
+        }
+      }
+      else{
+        for (var i = 0; i < data.length; i++)
+          result.log.push({ description: data[i].description, duration: data[i].duration, date: data[i].date});
+      }
       res.json(result);
     }
   })
